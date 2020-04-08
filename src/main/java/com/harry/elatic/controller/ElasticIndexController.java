@@ -11,18 +11,24 @@ import org.elasticsearch.search.aggregations.bucket.terms.ParsedLongTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.ParsedStringTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.aggregation.AggregatedPage;
 import org.springframework.data.elasticsearch.core.query.FetchSourceFilter;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
+import org.springframework.data.elasticsearch.core.query.SearchQuery;
+import org.springframework.data.util.CloseableIterator;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
 
 @RestController
 @RequestMapping("es-index")
@@ -42,6 +48,27 @@ public class ElasticIndexController {
     @GetMapping("/getLogsBefor/{currentTime}")
     public List<EppfLogEntity> getLogsBefor(@PathVariable("currentTime")String currentTime) {
         List<EppfLogEntity> entities = repository.findByCurrentTimeBefore(currentTime);
+        return entities;
+    }
+
+    @GetMapping("queryScroll")
+    public List<EppfLogEntity> queryScroll(){
+        String INDEX_NAME="oppf_esb_log-2020.04.080136",
+                TYPE_NAME="_doc";
+        SearchQuery searchQuery = new NativeSearchQueryBuilder()
+                .withQuery(matchAllQuery())
+                .withIndices(INDEX_NAME)
+                .withTypes(TYPE_NAME)
+                .withFields("message","class")
+                .withPageable(PageRequest.of(0, 10))
+                .build();
+
+        CloseableIterator<EppfLogEntity> stream = elasticsearchOperations.stream(searchQuery, EppfLogEntity.class);
+
+        List<EppfLogEntity> entities = new ArrayList<>();
+        while (stream.hasNext()) {
+            entities.add(stream.next());
+        }
         return entities;
     }
 
