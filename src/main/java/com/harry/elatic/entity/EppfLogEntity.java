@@ -7,19 +7,20 @@ import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 
 @Data
-@Document(indexName = "oppf_esb_log-2020.04", type = "_doc")
+@Document(indexName = "oppf_esb_log-2020.04.080136", type = "_doc", createIndex = false)
 public class EppfLogEntity {
     @Id
-    private Long id;
+    @Field(type = FieldType.Text, name = "_id")
+    private String id;
     private String host;
     private String message;
     private String type;
     @Field(type = FieldType.Date)
     private String date;
     private String time;
-    @Field(type = FieldType.Text,fielddata = true)
+    @Field(type = FieldType.Text, fielddata = true)
     private String file;
-    @Field(type = FieldType.Text,fielddata = true, name = "class")
+    @Field(type = FieldType.Text, fielddata = true, name = "class")
     private String clazz;
     private String path;
     private String level;
@@ -27,4 +28,8 @@ public class EppfLogEntity {
     private String thread;
     @Field(name = "@timestamp")
     private String currentTime;
+    @Field(name = "custom_text")
+    private String customText;
+    @Field(name = "trace_exception")
+    private String traceException;
 }

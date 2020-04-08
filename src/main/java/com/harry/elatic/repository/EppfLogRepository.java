@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface EppfLogRepository extends ElasticsearchRepository<EppfLogEntity, Long> {
+public interface EppfLogRepository extends ElasticsearchRepository<EppfLogEntity, String> {
 
     List<EppfLogEntity> findByCurrentTimeBefore(String currentTime);
 
