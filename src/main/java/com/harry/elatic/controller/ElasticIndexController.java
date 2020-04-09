@@ -65,7 +65,7 @@ public class ElasticIndexController {
     }
 
     @GetMapping("/getLogsBefor/{currentTime}")
-    public List<EppfLogEntity> getLogsBefor(@PathVariable("currentTime")String currentTime) {
+    public List<EppfLogEntity> getLogsBefor(@PathVariable("currentTime") String currentTime) {
         List<EppfLogEntity> entities = repository.findByCurrentTimeBefore(currentTime);
         return entities;
     }
@@ -77,7 +77,7 @@ public class ElasticIndexController {
     }
 
     @GetMapping("queryScroll")
-    public List<EppfLogEntity> queryScroll(){
+    public List<EppfLogEntity> queryScroll() {
         //构建tag不存在的数据
         BoolQueryBuilder queryBuilder = boolQuery().mustNot(existsQuery("tag"));
 
@@ -87,7 +87,7 @@ public class ElasticIndexController {
 //                .withQuery(termsQuery("tag.keyword","服务编码:*_*_*获取到*.*.*.*:*?*=*&*=*_*_*_*&*=*&*=*连接耗时:*,*调用耗时：*"))
                 .withQuery(queryBuilder)
                 .withSort(fieldSort("@timestamp").order(SortOrder.ASC))
-                .withFields("id","message","tag","@timestamp")
+                .withFields("id", "message", "tag", "@timestamp")
                 .withPageable(PageRequest.of(0, 2))
                 .build();
 
@@ -101,19 +101,19 @@ public class ElasticIndexController {
     }
 
     @GetMapping("getCount")
-    public List getCount(){
-        NativeSearchQueryBuilder queryBuilder = new NativeSearchQueryBuilder();
-        // 不过滤任何结果
-        queryBuilder.withSourceFilter(new FetchSourceFilter(new String[]{""}, null));
-        // 1、添加一个新的聚合，聚合类型为terms，聚合名称为title，聚合字段为class
-        queryBuilder.addAggregation(
-                AggregationBuilders.terms("title").field("class.keyword")
-                        //嵌套聚合
-                .subAggregation(AggregationBuilders.terms("dateSum").field("date")
-                        .order(BucketOrder.key(true)))
-        );
+    public List getCount() {
+        SearchQuery searchQuery = new NativeSearchQueryBuilder()
+                // 不过滤任何结果
+                .withSourceFilter(new FetchSourceFilter(new String[]{""}, null))
+                // 1、添加一个新的聚合，聚合类型为terms，聚合名称为title，聚合字段为class
+                .addAggregation(
+                        AggregationBuilders.terms("title").field("class.keyword")
+                                //嵌套聚合
+                                .subAggregation(AggregationBuilders.terms("dateSum").field("date")
+                                        .order(BucketOrder.key(true)))
+                ).build();
         // 2、查询,需要把结果强转为AggregatedPage类型
-        AggregatedPage<EppfLogEntity> aggPage = (AggregatedPage<EppfLogEntity>) this.repository.search(queryBuilder.build());
+        AggregatedPage<EppfLogEntity> aggPage = (AggregatedPage<EppfLogEntity>) this.repository.search(searchQuery);
         // 3、解析
         // 3.1、从结果中取出名为title的那个聚合，
         ParsedStringTerms aggTitle = (ParsedStringTerms) aggPage.getAggregation("title");
@@ -124,13 +124,13 @@ public class ElasticIndexController {
         for (Terms.Bucket bucket : buckets) {
             //3.5 获取子聚合结果
             Aggregations dataAggregations = bucket.getAggregations();
-            ParsedLongTerms dateSum = (ParsedLongTerms)dataAggregations.asMap().get("dateSum");
-            dateSum.getBuckets().stream().forEach(subBucket->{
+            ParsedLongTerms dateSum = (ParsedLongTerms) dataAggregations.asMap().get("dateSum");
+            dateSum.getBuckets().stream().forEach(subBucket -> {
                 HashMap<String, Object> map = Maps.newHashMap();
                 // 3.4、获取桶中的key=即错误类型,获取桶中的文档数量
-                map.put("错误类型",bucket.getKeyAsString());
-                map.put("日期",subBucket.getKeyAsString());
-                map.put("错误量",subBucket.getDocCount());
+                map.put("错误类型", bucket.getKeyAsString());
+                map.put("日期", subBucket.getKeyAsString());
+                map.put("错误量", subBucket.getDocCount());
                 list.add(map);
             });
         }
