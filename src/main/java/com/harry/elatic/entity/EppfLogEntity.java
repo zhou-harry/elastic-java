@@ -10,7 +10,7 @@ import org.springframework.data.elasticsearch.annotations.FieldType;
 @Document(indexName = "oppf_esb_log-2020.04.080136", type = "_doc", createIndex = false)
 public class EppfLogEntity {
     @Id
-    @Field(type = FieldType.Text, name = "_id")
+    @Field(type = FieldType.Text)
     private String id;
     private String host;
     private String message;
@@ -32,4 +32,6 @@ public class EppfLogEntity {
     private String customText;
     @Field(name = "trace_exception")
     private String traceException;
+    //日志模式标签
+    private String tag;
 }

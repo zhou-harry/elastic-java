@@ -11,4 +11,6 @@ public interface EppfLogRepository extends ElasticsearchRepository<EppfLogEntity
 
     List<EppfLogEntity> findByCurrentTimeBefore(String currentTime);
 
+    List<EppfLogEntity> findByTagNull();
+
 }

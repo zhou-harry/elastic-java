@@ -4,12 +4,14 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.harry.elatic.entity.EppfLogEntity;
 import com.harry.elatic.repository.EppfLogRepository;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.aggregations.BucketOrder;
 import org.elasticsearch.search.aggregations.bucket.terms.ParsedLongTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.ParsedStringTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
@@ -23,12 +25,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
-import static org.elasticsearch.index.query.QueryBuilders.matchAllQuery;
+import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
+import static org.elasticsearch.index.query.QueryBuilders.existsQuery;
+import static org.elasticsearch.search.sort.SortBuilders.fieldSort;
 
 @RestController
 @RequestMapping("es-index")
@@ -39,10 +43,25 @@ public class ElasticIndexController {
     @Autowired
     private EppfLogRepository repository;
 
-    @GetMapping("/getIndex")
+    @GetMapping("/findLosg")
     public List<EppfLogEntity> findLosg() {
         Iterable<EppfLogEntity> entities = repository.findAll();
         return Lists.newArrayList(entities);
+    }
+
+    @GetMapping("/findById/{id}")
+    public EppfLogEntity findById(@PathVariable("id") String id) {
+        Optional<EppfLogEntity> entity = repository.findById(id);
+        return entity.get();
+    }
+
+    @GetMapping("/updateTagById/{id}")
+    public EppfLogEntity updateTagById(@PathVariable("id") String id) {
+        Optional<EppfLogEntity> entity = repository.findById(id);
+        EppfLogEntity logEntity = entity.get();
+        logEntity.setTag(null);
+        EppfLogEntity saveEntity = repository.save(logEntity);
+        return saveEntity;
     }
 
     @GetMapping("/getLogsBefor/{currentTime}")
@@ -51,21 +70,30 @@ public class ElasticIndexController {
         return entities;
     }
 
+    @GetMapping("/findByTagIsNull")
+    public List<EppfLogEntity> findByTagIsNull() {
+        List<EppfLogEntity> entities = repository.findByTagNull();
+        return entities;
+    }
+
     @GetMapping("queryScroll")
     public List<EppfLogEntity> queryScroll(){
-        String INDEX_NAME="oppf_esb_log-2020.04.080136",
-                TYPE_NAME="_doc";
+        //构建tag不存在的数据
+        BoolQueryBuilder queryBuilder = boolQuery().mustNot(existsQuery("tag"));
+
         SearchQuery searchQuery = new NativeSearchQueryBuilder()
-                .withQuery(matchAllQuery())
-                .withIndices(INDEX_NAME)
-                .withTypes(TYPE_NAME)
-                .withFields("message","class")
-                .withPageable(PageRequest.of(0, 10))
+                //不分词查询:查询tag带有“服务编码:*_*_*获取到*.*.*.*:*?*=*&*=*_*_*_*&*=*&*=*连接耗时:*,*调用耗时：*”的内容
+//                .withQuery(matchPhraseQuery("tag","服务编码:*_*_*获取到*.*.*.*:*?*=*&*=*_*_*_*&*=*&*=*连接耗时:*,*调用耗时：*"))
+//                .withQuery(termsQuery("tag.keyword","服务编码:*_*_*获取到*.*.*.*:*?*=*&*=*_*_*_*&*=*&*=*连接耗时:*,*调用耗时：*"))
+                .withQuery(queryBuilder)
+                .withSort(fieldSort("@timestamp").order(SortOrder.ASC))
+                .withFields("id","message","tag","@timestamp")
+                .withPageable(PageRequest.of(0, 2))
                 .build();
 
         CloseableIterator<EppfLogEntity> stream = elasticsearchOperations.stream(searchQuery, EppfLogEntity.class);
 
-        List<EppfLogEntity> entities = new ArrayList<>();
+        List<EppfLogEntity> entities = Lists.newArrayList();
         while (stream.hasNext()) {
             entities.add(stream.next());
         }
