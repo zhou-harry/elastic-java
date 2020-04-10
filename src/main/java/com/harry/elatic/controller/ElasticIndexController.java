@@ -3,7 +3,14 @@ package com.harry.elatic.controller;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.harry.elatic.entity.EppfLogEntity;
+import com.harry.elatic.exception.RemoteCallException;
+import com.harry.elatic.properties.CoreProperties;
 import com.harry.elatic.repository.EppfLogRepository;
+import com.harry.elatic.utils.JsonMapperUtil;
+import com.harry.elatic.utils.RestUtil;
+import com.harry.elatic.view.LogPatternRequest;
+import com.harry.elatic.view.LogPatternRsponse;
+import org.apache.commons.collections.MapUtils;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.Aggregations;
@@ -13,6 +20,7 @@ import org.elasticsearch.search.aggregations.bucket.terms.ParsedStringTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.aggregation.AggregatedPage;
@@ -20,18 +28,15 @@ import org.springframework.data.elasticsearch.core.query.FetchSourceFilter;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
 import org.springframework.data.elasticsearch.core.query.SearchQuery;
 import org.springframework.data.util.CloseableIterator;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
-import static org.elasticsearch.index.query.QueryBuilders.boolQuery;
-import static org.elasticsearch.index.query.QueryBuilders.existsQuery;
+import static org.elasticsearch.index.query.QueryBuilders.*;
 import static org.elasticsearch.search.sort.SortBuilders.fieldSort;
 
 @RestController
@@ -42,6 +47,11 @@ public class ElasticIndexController {
     private ElasticsearchOperations elasticsearchOperations;
     @Autowired
     private EppfLogRepository repository;
+    @Autowired
+    @Qualifier("remoteRestTemplate")
+    private RestTemplate remoteRestTemplate;
+    @Autowired
+    private CoreProperties properties;
 
     @GetMapping("/findLosg")
     public List<EppfLogEntity> findLosg() {
@@ -55,13 +65,24 @@ public class ElasticIndexController {
         return entity.get();
     }
 
+    @PostMapping("/updateByIds")
+    public String updateById(@RequestBody  String[] ids) {
+        if(Objects.isNull(ids)){
+            return null;
+        }
+        Arrays.stream(ids).forEach(id->{
+            Optional<EppfLogEntity> entity = repository.findById(id);
+            EppfLogEntity logEntity = entity.get();
+            logEntity.setTag(null);
+            repository.save(logEntity);
+        });
+        return "OK";
+    }
+
     @GetMapping("/updateTagById/{id}")
-    public EppfLogEntity updateTagById(@PathVariable("id") String id) {
-        Optional<EppfLogEntity> entity = repository.findById(id);
-        EppfLogEntity logEntity = entity.get();
-        logEntity.setTag(null);
-        EppfLogEntity saveEntity = repository.save(logEntity);
-        return saveEntity;
+    public String updateTagById(@PathVariable("id") String id) {
+        repository.updateTagById(null,id);
+        return "OK";
     }
 
     @GetMapping("/getLogsBefor/{currentTime}")
@@ -76,16 +97,13 @@ public class ElasticIndexController {
         return entities;
     }
 
+
     @GetMapping("queryScroll")
     public List<EppfLogEntity> queryScroll() {
-        //构建tag不存在的数据
-        BoolQueryBuilder queryBuilder = boolQuery().mustNot(existsQuery("tag"));
-
         SearchQuery searchQuery = new NativeSearchQueryBuilder()
                 //不分词查询:查询tag带有“服务编码:*_*_*获取到*.*.*.*:*?*=*&*=*_*_*_*&*=*&*=*连接耗时:*,*调用耗时：*”的内容
-//                .withQuery(matchPhraseQuery("tag","服务编码:*_*_*获取到*.*.*.*:*?*=*&*=*_*_*_*&*=*&*=*连接耗时:*,*调用耗时：*"))
+                .withQuery(matchPhraseQuery("tag", "服务编码:*_*_*获取到*.*.*.*:*?*=*&*=*_*_*_*&*=*&*=*连接耗时:*,*调用耗时：*"))
 //                .withQuery(termsQuery("tag.keyword","服务编码:*_*_*获取到*.*.*.*:*?*=*&*=*_*_*_*&*=*&*=*连接耗时:*,*调用耗时：*"))
-                .withQuery(queryBuilder)
                 .withSort(fieldSort("@timestamp").order(SortOrder.ASC))
                 .withFields("id", "message", "tag", "@timestamp")
                 .withPageable(PageRequest.of(0, 2))
@@ -98,6 +116,76 @@ public class ElasticIndexController {
             entities.add(stream.next());
         }
         return entities;
+    }
+
+    /**
+     * 滚动获取ES数据中tag值为null的数据，并发送到Python中进行模式匹配
+     *
+     * @return
+     */
+    @GetMapping("/patternRecognition")
+    public List<LogPatternRsponse> patternRecognition() {
+        //获取ES中tag不存在的日志数据
+        BoolQueryBuilder queryBuilder = boolQuery().mustNot(existsQuery("tag"));
+        SearchQuery searchQuery = new NativeSearchQueryBuilder()
+                .withQuery(queryBuilder)
+                .withSort(fieldSort("@timestamp").order(SortOrder.ASC))
+                .withFields("id", "message")
+                .withPageable(PageRequest.of(0, 200))
+                .build();
+        CloseableIterator<EppfLogEntity> stream = elasticsearchOperations.stream(searchQuery, EppfLogEntity.class);
+
+        HashMap<String, String> types = Maps.newHashMap();
+        HashMap<String, String> msg = Maps.newHashMap();
+        while (stream.hasNext()) {
+            EppfLogEntity entity = stream.next();
+            msg.put(entity.getId(), entity.getMessage());
+        }
+        LogPatternRequest requestBody = LogPatternRequest.builder()
+                .num(2)
+                .types(types)
+                .msg(msg)
+                .build();
+        //调用Python远程rest接口
+        String url = properties.getPythonUrl() + "/LogTemplate";
+        ResponseEntity<String> responseEntity = RestUtil.builder(remoteRestTemplate)
+                .url(url)
+                .method(HttpMethod.POST)
+                .body(requestBody)
+                .responseType(String.class)
+                .exchange();
+        if (HttpStatus.OK != responseEntity.getStatusCode()) {
+            throw new RemoteCallException("远程接口调用异常，状态码：" + responseEntity.getStatusCode());
+        }
+        List<Map<String, Object>> maps = JsonMapperUtil.fromJsonForMapList(responseEntity.getBody());
+
+        if (maps.size() != 1) {
+            throw new RemoteCallException("远程接口调用返回结果无效");
+        }
+        Map<String, Object> map = maps.get(0);
+        List result = (ArrayList)map.get("data");
+        if (result == null) {
+            throw new RemoteCallException("远程接口调用返回日志模式无效");
+        }
+        List<LogPatternRsponse> patterns = Lists.newArrayList();
+        result.stream().forEach(pattern->{
+            LinkedHashMap p = (LinkedHashMap) pattern;
+            List ids = (List) p.get("ids");
+            patterns.add(LogPatternRsponse.builder()
+                    .id(MapUtils.getString(p,"id"))
+                    .name(MapUtils.getString(p,"name"))
+                    .count(MapUtils.getIntValue(p,"count"))
+                    .ids(ids)
+                    .build());
+            //将匹配的日志模式回写到ES中
+            ids.stream().forEach(id->{
+                Optional<EppfLogEntity> entity = repository.findById(id.toString());
+                EppfLogEntity logEntity = entity.get();
+                logEntity.setTag(MapUtils.getString(p,"name"));
+                repository.save(logEntity);
+            });
+        });
+        return patterns;
     }
 
     @GetMapping("getCount")
