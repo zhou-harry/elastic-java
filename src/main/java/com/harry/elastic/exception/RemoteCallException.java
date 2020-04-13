@@ -1,4 +1,4 @@
-package com.harry.elatic.exception;
+package com.harry.elastic.exception;
 
 /**
  * 远程调用异常

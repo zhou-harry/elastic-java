@@ -1,4 +1,4 @@
-package com.harry.elatic.view;
+package com.harry.elastic.view;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

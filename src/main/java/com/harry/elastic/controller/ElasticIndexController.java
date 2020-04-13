@@ -1,15 +1,15 @@
-package com.harry.elatic.controller;
+package com.harry.elastic.controller;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.harry.elatic.entity.EppfLogEntity;
-import com.harry.elatic.exception.RemoteCallException;
-import com.harry.elatic.properties.CoreProperties;
-import com.harry.elatic.repository.EppfLogRepository;
-import com.harry.elatic.utils.JsonMapperUtil;
-import com.harry.elatic.utils.RestUtil;
-import com.harry.elatic.view.LogPatternRequest;
-import com.harry.elatic.view.LogPatternRsponse;
+import com.harry.elastic.entity.EppfLogEntity;
+import com.harry.elastic.exception.RemoteCallException;
+import com.harry.elastic.properties.CoreProperties;
+import com.harry.elastic.repository.EppfLogRepository;
+import com.harry.elastic.utils.JsonMapperUtil;
+import com.harry.elastic.utils.RestUtil;
+import com.harry.elastic.view.LogPatternRequest;
+import com.harry.elastic.view.LogPatternRsponse;
 import org.apache.commons.collections.MapUtils;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.search.aggregations.AggregationBuilders;

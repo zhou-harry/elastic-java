@@ -1,4 +1,4 @@
-package com.harry.elatic.utils;
+package com.harry.elastic.utils;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonGenerator;

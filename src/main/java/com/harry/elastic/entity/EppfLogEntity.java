@@ -1,4 +1,4 @@
-package com.harry.elatic.entity;
+package com.harry.elastic.entity;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;
@@ -7,7 +7,7 @@ import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
 
 @Data
-@Document(indexName = "oppf_esb_log-2020.04.080136", type = "_doc", createIndex = false)
+@Document(indexName = "oppf_esb_log-2020.04.13", type = "_doc", createIndex = false)
 public class EppfLogEntity {
     @Id
     @Field(type = FieldType.Text)

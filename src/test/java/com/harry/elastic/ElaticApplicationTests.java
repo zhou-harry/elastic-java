@@ -1,4 +1,4 @@
-package com.harry.elatic;
+package com.harry.elastic;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

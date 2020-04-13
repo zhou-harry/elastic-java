@@ -1,6 +1,6 @@
-package com.harry.elatic.repository;
+package com.harry.elastic.repository;
 
-import com.harry.elatic.entity.EppfLogEntity;
+import com.harry.elastic.entity.EppfLogEntity;
 import org.springframework.data.elasticsearch.annotations.Query;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 import org.springframework.stereotype.Repository;

@@ -1,4 +1,4 @@
-package com.harry.elatic.config;
+package com.harry.elastic.config;
 
 import org.elasticsearch.client.RestHighLevelClient;
 import org.springframework.context.annotation.Bean;

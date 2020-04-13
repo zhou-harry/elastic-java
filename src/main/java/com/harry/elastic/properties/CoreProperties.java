@@ -1,4 +1,4 @@
-package com.harry.elatic.properties;
+package com.harry.elastic.properties;
 
 import lombok.Getter;
 import lombok.Setter;

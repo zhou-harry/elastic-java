@@ -1,6 +1,6 @@
-package com.harry.elatic;
+package com.harry.elastic;
 
-import com.harry.elatic.properties.CoreProperties;
+import com.harry.elastic.properties.CoreProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
