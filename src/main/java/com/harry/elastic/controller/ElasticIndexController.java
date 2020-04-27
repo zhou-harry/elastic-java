@@ -11,7 +11,9 @@ import com.harry.elastic.utils.RestUtil;
 import com.harry.elastic.view.LogPatternRequest;
 import com.harry.elastic.view.LogPatternRsponse;
 import org.apache.commons.collections.MapUtils;
+import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.Aggregations;
 import org.elasticsearch.search.aggregations.BucketOrder;
@@ -22,7 +24,9 @@ import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
+import org.springframework.data.elasticsearch.core.SearchResultMapper;
 import org.springframework.data.elasticsearch.core.aggregation.AggregatedPage;
 import org.springframework.data.elasticsearch.core.query.FetchSourceFilter;
 import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
@@ -34,6 +38,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 
 import static org.elasticsearch.index.query.QueryBuilders.*;
@@ -108,7 +114,6 @@ public class ElasticIndexController {
                 .withFields("id", "message", "tag", "@timestamp")
                 .withPageable(PageRequest.of(0, 2))
                 .build();
-
         CloseableIterator<EppfLogEntity> stream = elasticsearchOperations.stream(searchQuery, EppfLogEntity.class);
 
         List<EppfLogEntity> entities = Lists.newArrayList();
@@ -223,5 +228,12 @@ public class ElasticIndexController {
             });
         }
         return list;
+    }
+
+    public static void main(String[] args) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now1 = LocalDateTime.now(ZoneOffset.UTC);
+        System.out.println(now);
+        System.out.println(now1);
     }
 }

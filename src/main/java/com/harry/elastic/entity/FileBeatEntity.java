@@ -1,9 +1,7 @@
 package com.harry.elastic.entity;
 
-import com.sun.xml.internal.ws.developer.Serialization;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.TypeAlias;
 import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.data.elasticsearch.annotations.Field;
 import org.springframework.data.elasticsearch.annotations.FieldType;
@@ -12,7 +10,7 @@ import java.io.Serializable;
 import java.util.List;
 
 @Data
-@Document(indexName = "oppf_esb_log-2020.04.15", type = "_doc", createIndex = false)
+@Document(indexName = "bes-f-esb_log-2020.04.17", type = "_doc", createIndex = false)
 public class FileBeatEntity implements Serializable{
 
     @Id
@@ -24,8 +22,8 @@ public class FileBeatEntity implements Serializable{
     private Agent agent;
     private String message;
     private List tags;
-    private List patterns;
-    @Field(name = "fields")
+    private List<String> patterns;
+    @Field(name = "fields",type =FieldType.Object)
     private Fields fields;
     @Field(name = "log")
     private Log log;
@@ -63,12 +61,10 @@ public class FileBeatEntity implements Serializable{
     }
 
     @Data
-    @Serialization
     public class Log implements Serializable {
 
         private File file;
         @Data
-        @Serialization
         public class File implements Serializable {
             private String path;
         }

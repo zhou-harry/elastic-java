@@ -12,10 +12,10 @@ import org.springframework.data.elasticsearch.core.EntityMapper;
 
 import java.time.Duration;
 
-@Configuration
+//@Configuration
 public class ElasticsearchClientConfig extends AbstractElasticsearchConfiguration {
 
-    @Bean
+//    @Bean
     @Override
     public RestHighLevelClient elasticsearchClient() {
         ClientConfiguration clientConfiguration = ClientConfiguration.builder()
@@ -30,7 +30,7 @@ public class ElasticsearchClientConfig extends AbstractElasticsearchConfiguratio
     }
 
     // use the ElasticsearchEntityMapper
-    @Bean
+//    @Bean
     @Override
     public EntityMapper entityMapper() {
         ElasticsearchEntityMapper entityMapper = new ElasticsearchEntityMapper(
