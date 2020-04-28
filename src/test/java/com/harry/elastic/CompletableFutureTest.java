@@ -2,6 +2,9 @@ package com.harry.elastic;
 
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -48,12 +51,6 @@ public class CompletableFutureTest {
         //捕捉异常,不会导致整个流程中断
         return CompletableFuture.runAsync(() -> {
             log.info("执行任务" + pageLink);
-            try {
-                Thread.sleep(3000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
         }, executor).exceptionally(throwable -> {
             log.info("线程[{}]发生了异常, 继续执行其他线程,错误详情[{}]", Thread.currentThread().getName(), throwable.getMessage());
             return null;
