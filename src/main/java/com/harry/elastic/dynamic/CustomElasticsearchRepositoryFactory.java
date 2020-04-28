@@ -23,7 +23,6 @@ import org.springframework.util.Assert;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Optional;
-import java.util.UUID;
 
 public class CustomElasticsearchRepositoryFactory extends RepositoryFactorySupport {
     private static final Logger logger = LoggerFactory.getLogger(CustomElasticsearchRepositoryFactory.class);
@@ -44,7 +43,7 @@ public class CustomElasticsearchRepositoryFactory extends RepositoryFactorySuppo
             field.setAccessible(true);
             String indexDefault = field.get(entityInformation).toString();
             if (!StringUtils.isEmpty(this.indexPrefix)) {
-                field.set(entityInformation, this.indexPrefix + "_" + indexDefault);
+                field.set(entityInformation, this.indexPrefix + "-" + indexDefault);
             }
         } catch (IllegalAccessException e) {
             logger.error("can not access field: ", e);

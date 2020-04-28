@@ -10,7 +10,7 @@ import java.io.Serializable;
 import java.util.List;
 
 @Data
-@Document(indexName = "bes-f-esb_log-2020.04.17", type = "_doc", createIndex = false)
+@Document(indexName = "f-esb_log-2020.04", type = "_doc", createIndex = false)
 public class FileBeatEntity implements Serializable{
 
     @Id

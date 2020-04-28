@@ -4,19 +4,18 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.elasticsearch.core.ElasticsearchTemplate;
+import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.repository.ElasticsearchRepository;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.util.regex.Pattern;
 
 public class ESDynamicIndexRepository<T> {
     private static final Logger logger = LoggerFactory.getLogger(ESDynamicIndexRepository.class);
     @Autowired
     private DynamicIndexElasticsearchTemplate dynamicIndexElasticsearchTemplate;
 
-    private CustomElasticsearchRepositoryFactory getFactory(String indexPrefix, ElasticsearchTemplate elasticsearchTemplate) {
+    private CustomElasticsearchRepositoryFactory getFactory(String indexPrefix, ElasticsearchOperations elasticsearchTemplate) {
         CustomElasticsearchRepositoryFactory elasticFactory = new CustomElasticsearchRepositoryFactory(elasticsearchTemplate, indexPrefix);
         return elasticFactory;
     }
@@ -35,17 +34,6 @@ public class ESDynamicIndexRepository<T> {
         return resolveReturnedClassFromGenericType(clazz.getSuperclass());
     }
 
-    /**
-     * @param indexPrefix
-     * @param cls         domain.class  interview.class
-     * @return
-     */
-    public ElasticsearchTemplate getElasticsearchTemplate(String indexPrefix, Class cls) {
-        ElasticsearchTemplate esTemplate = dynamicIndexElasticsearchTemplate.getElasticsearchTemplate();
-        dynamicIndexElasticsearchTemplate.setIndex(indexPrefix, cls, esTemplate);
-        return esTemplate;
-    }
-
     private Class getClazz(Class proxy) {
         Type[] types = proxy.getGenericInterfaces();
         Type t1 = ((ParameterizedType) types[0]).getActualTypeArguments()[0];
@@ -60,7 +48,7 @@ public class ESDynamicIndexRepository<T> {
     public T getProxyRepository(String indexPrefix) {
         Class<T> proxy = resolveReturnedClassFromGenericType();
         if (proxy.getClass().isInstance(ElasticsearchRepository.class)) {
-            ElasticsearchTemplate esTemplate = dynamicIndexElasticsearchTemplate.getElasticsearchTemplate();
+            ElasticsearchOperations esTemplate = dynamicIndexElasticsearchTemplate.getElasticsearchTemplate();
             CustomElasticsearchRepositoryFactory esFactory = getFactory(indexPrefix, esTemplate);
             T proxyRepository = esFactory.getRepository(proxy);
             if (!StringUtils.isEmpty(indexPrefix)) {
@@ -70,18 +58,6 @@ public class ESDynamicIndexRepository<T> {
         } else {
             throw new RuntimeException("do not support thie proxy class");
         }
-    }
-
-    public static void main(String args[]){
-        String content = "* 调用 * 服务 *";
-
-        String pattern = "\\*";
-
-        String replace = content.replace("*", "\\*\\");
-
-        System.out.println(replace);
-        boolean isMatch = Pattern.matches(pattern, content);
-        System.out.println(isMatch);
     }
 
 }

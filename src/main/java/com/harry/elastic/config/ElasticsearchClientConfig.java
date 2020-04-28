@@ -1,21 +1,38 @@
 package com.harry.elastic.config;
 
+import lombok.SneakyThrows;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Scope;
 import org.springframework.core.convert.support.DefaultConversionService;
 import org.springframework.data.elasticsearch.client.ClientConfiguration;
 import org.springframework.data.elasticsearch.client.RestClients;
 import org.springframework.data.elasticsearch.config.AbstractElasticsearchConfiguration;
-import org.springframework.data.elasticsearch.core.ElasticsearchEntityMapper;
-import org.springframework.data.elasticsearch.core.EntityMapper;
+import org.springframework.data.elasticsearch.core.*;
+import org.springframework.data.elasticsearch.core.convert.ElasticsearchConverter;
+import org.springframework.data.elasticsearch.core.convert.MappingElasticsearchConverter;
+import org.springframework.data.elasticsearch.core.mapping.SimpleElasticsearchMappingContext;
 
 import java.time.Duration;
 
-//@Configuration
+@Configuration
 public class ElasticsearchClientConfig extends AbstractElasticsearchConfiguration {
 
-//    @Bean
+    @Override
+    @SneakyThrows
+    @Scope("prototype")
+    @Bean(name = {"elasticsearchOperations", "elasticsearchTemplate"})
+    public ElasticsearchOperations elasticsearchOperations() {
+        SimpleElasticsearchMappingContext mappingContext = new SimpleElasticsearchMappingContext();
+        mappingContext.setInitialEntitySet(getInitialEntitySet());
+        mappingContext.setSimpleTypeHolder(elasticsearchCustomConversions().getSimpleTypeHolder());
+
+        MappingElasticsearchConverter converter = new MappingElasticsearchConverter(mappingContext);
+
+        return new ElasticsearchRestTemplate(elasticsearchClient(), converter, resultsMapper());
+    }
+    @Bean
     @Override
     public RestHighLevelClient elasticsearchClient() {
         ClientConfiguration clientConfiguration = ClientConfiguration.builder()
@@ -29,8 +46,7 @@ public class ElasticsearchClientConfig extends AbstractElasticsearchConfiguratio
         return RestClients.create(clientConfiguration).rest();
     }
 
-    // use the ElasticsearchEntityMapper
-//    @Bean
+    @Bean
     @Override
     public EntityMapper entityMapper() {
         ElasticsearchEntityMapper entityMapper = new ElasticsearchEntityMapper(

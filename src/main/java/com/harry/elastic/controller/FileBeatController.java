@@ -1,12 +1,17 @@
 package com.harry.elastic.controller;
 
 import com.google.common.collect.Maps;
+import com.harry.elastic.dynamic.DynamicIndexElasticsearchTemplate;
 import com.harry.elastic.entity.FileBeatEntity;
 import com.harry.elastic.service.ElasticService;
 import com.harry.elastic.service.PythonService;
 import com.harry.elastic.view.LogPatternRequest;
 import com.harry.elastic.view.LogPatternRsponse;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
+import org.springframework.data.elasticsearch.core.query.SearchQuery;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -20,6 +25,7 @@ public class FileBeatController {
     private ElasticService elasticService;
     @Autowired
     private PythonService pythonService;
+
 
     @GetMapping("/findById/{id}")
     public FileBeatEntity findById(@PathVariable("id") String id) {
@@ -91,5 +97,10 @@ public class FileBeatController {
         return elasticService.patternAggregation();
     }
 
+
+    @GetMapping("/searchByElasticsearchTemplate")
+    public List<FileBeatEntity> searchByElasticsearchTemplate(@RequestParam String id) {
+        return elasticService.searchByElasticsearchTemplate(id);
+    }
 
 }

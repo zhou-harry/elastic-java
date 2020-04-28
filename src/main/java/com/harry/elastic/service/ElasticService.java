@@ -2,9 +2,12 @@ package com.harry.elastic.service;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.harry.elastic.dynamic.DynamicIndexElasticsearchTemplate;
 import com.harry.elastic.entity.FileBeatEntity;
+import com.harry.elastic.repository.FileBeatDynamicRepository;
 import com.harry.elastic.repository.FileBeatRepository;
 import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
 import org.elasticsearch.search.aggregations.bucket.terms.ParsedStringTerms;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
@@ -34,6 +37,10 @@ public class ElasticService {
     private FileBeatRepository repository;
     @Autowired
     private ElasticsearchOperations elasticsearchOperations;
+    @Autowired
+    private DynamicIndexElasticsearchTemplate dynamicIndexElasticsearchTemplate;
+    @Autowired
+    private FileBeatDynamicRepository dynamicRepository;
 
     /**
      * 根据id检索数据
@@ -42,7 +49,8 @@ public class ElasticService {
      * @return
      */
     public FileBeatEntity findById(String id) {
-        return repository.findById(id).get();
+        FileBeatRepository proxyRepository = dynamicRepository.getProxyRepository("bes");
+        return proxyRepository.findById(id).get();
     }
 
     /**
@@ -51,22 +59,42 @@ public class ElasticService {
      * @param id
      * @return
      */
-    public FileBeatEntity savePatterns(String id,String pattern) {
+    public FileBeatEntity savePatterns(String id, String pattern) {
         FileBeatEntity logEntity = findById(id);
         if (logEntity == null) {
             return null;
         }
         if (pattern == null) {
             logEntity.setPatterns(null);
-        }else {
+        } else {
             List<String> patterns = logEntity.getPatterns();
             if (patterns == null) {
-                patterns=Lists.newArrayList();
+                patterns = Lists.newArrayList();
             }
             patterns.add(pattern);
             logEntity.setPatterns(patterns);
         }
-        return repository.save(logEntity);
+        FileBeatRepository proxyRepository = dynamicRepository.getProxyRepository("bes");
+        return proxyRepository.save(logEntity);
+    }
+
+    /**
+     * 动态索引模板
+     *
+     * @return
+     */
+    public List<FileBeatEntity> searchByElasticsearchTemplate(String id) {
+
+        BoolQueryBuilder boolQuery = boolQuery()
+                .must(QueryBuilders.termsQuery("_id", id));
+
+        SearchQuery searchQuery = new NativeSearchQueryBuilder()
+                .withQuery(boolQuery)
+                .build();
+        List<FileBeatEntity> list = dynamicIndexElasticsearchTemplate
+                .getElasticsearchTemplate("bes", FileBeatEntity.class)
+                .queryForList(searchQuery, FileBeatEntity.class);
+        return list;
     }
 
     /**
@@ -95,7 +123,7 @@ public class ElasticService {
     }
 
     public List<FileBeatEntity> findWithPattern(String pattern) {
-        BoolQueryBuilder queryBuilder = boolQuery().mustNot(matchQuery("patterns",pattern));
+        BoolQueryBuilder queryBuilder = boolQuery().mustNot(matchQuery("patterns", pattern));
 
         SearchQuery searchQuery = new NativeSearchQueryBuilder()
                 .withQuery(queryBuilder)
@@ -114,6 +142,7 @@ public class ElasticService {
 
     /**
      * 根据日志模式统计
+     *
      * @return
      */
     public List patternAggregation() {
